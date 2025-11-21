@@ -1,18 +1,23 @@
-import { https } from "firebase-functions";
-import { initializeApp } from "firebase-admin/app";
+import { onCall } from "firebase-functions/v2/https";
+import { setGlobalOptions } from "firebase-functions/v2/options";
 
-// initialise the Firebase Admin SDK.
-initializeApp();
+setGlobalOptions({ region: "europe-west2" });
 
-export const helloWorld = https.onCall((data, context) => {
-    console.log("helloWorld function triggered");
+/**
+ * A simple callable function to test our setup.
+ * Note: In v2, we receive a single 'request' object.
+ */
+export const helloWorld = onCall((request) => {
+  console.log("helloWorld function triggered");
 
-    console.log("Data:", data);
-    console.log("Auth:", context.auth);
+  // Access data and auth from the request object
+  console.log("Data:", request.data);
+  console.log("Auth:", request.auth);
 
-    return {
-        message: "Hello from secure server! Your request was received.",
-        dataReceived: data,
-    };
+  // Send back a response
+  return {
+    message: "Hello from the secure v2 server!",
+    dataReceived: request.data,
+  };
 });
 

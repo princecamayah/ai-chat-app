@@ -1,35 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from './lib/firebase';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [responseMessage, setResponseMessage] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+  const callBackend = async () => {
+    setLoading(true);
+    setResponseMessage("Calling backend...");
+    
+    try {
+      // 1. Create a reference to the 'helloWorld' function
+      const helloWorld = httpsCallable(functions, 'helloWorld');
+      
+      // 2. Call the function securely
+      const result = await helloWorld({ message: "Hello from React!" });
+      
+      // 3. Display the result
+      // (We know our function returns { message: string })
+      const data = result.data as { message: string };
+      setResponseMessage(data.message);
+      
+    } catch (error) {
+      console.error(error);
+      setResponseMessage("Error calling backend. Check console.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      <h1 className="text-4xl font-bold mb-8 text-blue-600">CS310 Project</h1>
+      
+      <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+        <p className="mb-4 text-gray-700">
+          Test the connection between React and Firebase Cloud Functions.
         </p>
+        
+        <button
+          onClick={callBackend}
+          disabled={loading}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors"
+        >
+          {loading ? "Waiting..." : "Call Secure Backend"}
+        </button>
+
+        {responseMessage && (
+          <div className="mt-6 p-4 bg-gray-50 rounded border border-gray-200">
+            <p className="font-mono text-sm text-gray-800">{responseMessage}</p>
+          </div>
+        )}
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
