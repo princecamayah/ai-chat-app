@@ -7,7 +7,6 @@ export function ChatInput() {
     // get only the addMessage function from the store
     const addMessage = useChatStore((state) => state.addMessage);
     const setStatus = useChatStore((state) => state.setStatus);
-    const setGeneratedPlan = useChatStore((state => state.setGeneratedPlan));
 
     // modern ES6 JS using the arrow function
     // it just means create a variable named handleSend
@@ -42,11 +41,17 @@ export function ChatInput() {
                     content: "I've analyzed your requirements. Here is the generated plan for your review."
                 });
 
-                // set the plan
-                setGeneratedPlan("1. Goal: Build a React App\n2. Context: Use Zustand + Tailwind")
+                // add the plan
+                addMessage({
+                    id: crypto.randomUUID(),
+                    role: 'assistant',
+                    content: "1. Goal: Build a React App\n2. Context: Use Zustand + Tailwind",
+                    type: 'plan'
+                });
 
                 // change status
                 setStatus('reviewing');
+
             } else {
                 // normal reply
                 addMessage({

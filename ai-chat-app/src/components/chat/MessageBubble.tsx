@@ -1,4 +1,4 @@
-import { Message } from '../../stores/chatStore';
+import type { Message } from '../../stores/chatStore';
 
 interface MessageBubbleProps {
     message: Message;
@@ -13,7 +13,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 className={`max-w-[80%] rounded-lg px-4 py-2 ${
                     isUser
                         ? 'bg-blue-500 text-white rounded-br-none'
-                        : 'bg-gray-200 text-white rounded-bl-none'
+                        : 'bg-gray-400 text-white rounded-bl-none'
                 }`}
             >
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">

@@ -4,6 +4,7 @@ export interface Message {
     id: string;
     role: 'user' | 'assistant' | 'system';
     content: string;
+    type?: 'text' | 'plan'; // optional, defaults to 'text' 
 }
 
 interface ChatState {
@@ -16,13 +17,11 @@ interface ChatState {
         format: string;
         tone: string;
     };
-    generatedPlan: string | null;
     status: 'idle' | 'chatting' | 'reviewing'
 
     // -- actions --
     addMessage: (msg: Message) => void;
     updateInput: (field: keyof ChatState['inputs'], value: string) => void;
-    setGeneratedPlan: (plan: string | null) => void;
     setStatus: (status: ChatState['status']) => void;
 }
 
@@ -36,7 +35,6 @@ export const useChatStore = create<ChatState>((set) => ({
         format: '',
         tone: '',
     },
-    generatedPlan: null,
     status: 'idle',
 
     // -- action implementations --
@@ -52,9 +50,6 @@ export const useChatStore = create<ChatState>((set) => ({
                 [field]: value // update only the specific field
             }
         })),
-    
-    setGeneratedPlan: (plan) =>
-        set({generatedPlan: plan}),
 
     setStatus: (status) =>
         set({status: status}),

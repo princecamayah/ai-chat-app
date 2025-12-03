@@ -8,7 +8,6 @@ import { ActionButtons } from './components/chat/ActionButtons';
 function App() {
   // connect to the store  
   const messages = useChatStore((state) => state.messages);
-  const generatedPlan = useChatStore((state) => state.generatedPlan);
   const status = useChatStore((state) => state.status);
 
   // auto-scroll logic by attaching a ref to grab the bottom HTML element
@@ -17,7 +16,7 @@ function App() {
   // every time messages or generatedPlan changes, scroll to the bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, generatedPlan]);
+  }, [messages]);
 
   return (
     // 1. Main Container: Full screen height, light gray background
@@ -45,14 +44,13 @@ function App() {
           )}
 
           {/* message list */}
-          {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
-
-          {/* the plan: shown conditioned that generatedPlan is not null */}
-          {generatedPlan && (
-            <GeneratedPlanCard plan={generatedPlan} />
-          )}
+          {messages.map((msg) => {
+            if (msg.type == 'plan') {
+              return <GeneratedPlanCard key={msg.id} plan={msg.content} />
+            } else {
+              return <MessageBubble key={msg.id} message={msg} />
+            }
+          })}
 
           {/* invisible element to auto-scroll to */}
           <div ref={bottomRef}/>
