@@ -6,6 +6,8 @@ export function ChatInput() {
 
     // get only the addMessage function from the store
     const addMessage = useChatStore((state) => state.addMessage);
+    const setStatus = useChatStore((state) => state.setStatus);
+    const setGeneratedPlan = useChatStore((state => state.setGeneratedPlan));
 
     // modern ES6 JS using the arrow function
     // it just means create a variable named handleSend
@@ -23,8 +25,37 @@ export function ChatInput() {
             content: inputText
         });
 
-        // reset the text box
+        // switch to chatting mode if we were 'idle'
+        setStatus('chatting');
+
+        // clear input
         setInputText('');
+
+        // mock AI logic
+        setTimeout(() => {
+            if (inputText.toLowerCase().includes('plan')) {
+
+                // add the AI's message
+                addMessage({
+                    id: crypto.randomUUID(),
+                    role: 'assistant',
+                    content: "I've analyzed your requirements. Here is the generated plan for your review."
+                });
+
+                // set the plan
+                setGeneratedPlan("1. Goal: Build a React App\n2. Context: Use Zustand + Tailwind")
+
+                // change status
+                setStatus('reviewing');
+            } else {
+                // normal reply
+                addMessage({
+                    id: crypto.randomUUID(),
+                    role: 'assistant',
+                    content: "I am listening. Tell me more, or say 'plan' to generate the metaprompt."
+                });
+            }
+        }, 1000); // 1 second delay
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
