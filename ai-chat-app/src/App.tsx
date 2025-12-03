@@ -1,58 +1,76 @@
-import { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from './lib/firebase';
+import { useEffect, useRef } from 'react';
+import { useChatStore } from './stores/chatStore';
+import { MessageBubble } from './components/chat/MessageBubble';
+import { ChatInput } from './components/chat/ChatInput';
+import { GeneratedPlanCard } from './components/chat/GeneratedPlanCard';
+import { ActionButtons } from './components/chat/ActionButtons';
 
 function App() {
-  const [responseMessage, setResponseMessage] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+  // connect to the store  
+  const messages = useChatStore((state) => state.messages);
+  const generatedPlan = useChatStore((state) => state.generatedPlan);
+  const status = useChatStore((state) => state.status);
 
-  const callBackend = async () => {
-    setLoading(true);
-    setResponseMessage("Calling backend...");
-    
-    try {
-      // 1. Create a reference to the 'helloWorld' function
-      const helloWorld = httpsCallable(functions, 'helloWorld');
-      
-      // 2. Call the function securely
-      const result = await helloWorld({ message: "Hello from React!" });
-      
-      // 3. Display the result
-      // (We know our function returns { message: string })
-      const data = result.data as { message: string };
-      setResponseMessage(data.message);
-      
-    } catch (error) {
-      console.error(error);
-      setResponseMessage("Error calling backend. Check console.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // auto-scroll logic by attaching a ref to grab the bottom HTML element
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // every time messages or generatedPlan changes, scroll to the bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, generatedPlan]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-      <h1 className="text-4xl font-bold mb-8 text-blue-600">CS310 Project</h1>
+    // 1. Main Container: Full screen height, light gray background
+    <div className="flex h-screen w-full flex-col bg-gray-100">
       
-      <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-        <p className="mb-4 text-gray-700">
-          Test the connection between React and Firebase Cloud Functions.
-        </p>
-        
-        <button
-          onClick={callBackend}
-          disabled={loading}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Waiting..." : "Call Secure Backend"}
-        </button>
+      {/* 2. Top Bar (Placeholder for your "Open" sidebar button) */}
+      <header className="flex items-center justify-between p-4 border-b bg-white shadow-sm">
+        <div className="flex items-center gap-4">
+          <button className="px-4 py-2 bg-blue-600 text-sm text-white font-medium rounded hover:bg-blue-700">
+            Open Sidebar (Placeholder)
+          </button>
+          <h1 className="ml-4 font-bold text-xl">Assisted Mode</h1>
+        </div>
+      </header>
 
-        {responseMessage && (
-          <div className="mt-6 p-4 bg-gray-50 rounded border border-gray-200">
-            <p className="font-mono text-sm text-gray-800">{responseMessage}</p>
-          </div>
-        )}
-      </div>
+      {/* the chat area */}
+      <main className="flex-1 overflow-y-auto p-4">
+        <div className="mx-auto max-w-3xl flex flex-col">
+
+          {/* empty state */}
+          {messages.length === 0 && (
+            <div className="mt-20 text-center text-gray-400">
+              <p>Start by saying "Hello"...</p>
+            </div>
+          )}
+
+          {/* message list */}
+          {messages.map((msg) => (
+            <MessageBubble key={msg.id} message={msg} />
+          ))}
+
+          {/* the plan: shown conditioned that generatedPlan is not null */}
+          {generatedPlan && (
+            <GeneratedPlanCard plan={generatedPlan} />
+          )}
+
+          {/* invisible element to auto-scroll to */}
+          <div ref={bottomRef}/>
+        </div>
+         
+      </main>
+
+      {/* footer */}
+      <footer className="p-4 bg-white border-t">
+         <div className="mx-auto max-w-3xl">
+            {status === 'reviewing' ? (
+              <ActionButtons />
+            ) : (
+              <ChatInput />
+            )}
+         </div>
+      </footer>
+
     </div>
   );
 }
