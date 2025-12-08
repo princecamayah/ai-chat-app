@@ -16,9 +16,39 @@ export class GeminiProvider implements AIProvider {
     // we use async to tell the computer to pause execution at specific lines of this function
     async generateResponse(history: Message[]): Promise<AIResponse> {
         // TODO: logic for converting messages
+
+        // filter for system message
+        const systemMessage = history.find(m => m.role === 'system');
+
+        // filter for chat history and translate syntax
+        const chatHistory = history
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role: m.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: m.content }],
+            }));
+        
+        // split history into context and the new message
+        const lastMessage = chatHistory.pop();
+        const pastMessages = chatHistory
+
+        if (!lastMessage) {
+            throw new Error("No user message found in history.");
+        }
+
+        // initialise chat with system instruction and history
+        const chat = this.model.startChat({
+            history: pastMessages,
+            systemInstruction: systemMessage ? systemMessage.content : "You are a helpful AI.",
+        });
+
+        // send the new message and wait for the Promise
+        const result = await chat.sendMessage(lastMessage.parts[0].text);
+        const responseText = result.response.text();
+
         return {
-            content: "Gemini connection established. Logic pending.",
-            type: "text"
+            content: responseText,
+            type: "text" // we override this in index.ts in the case of a plan
         };
     }
 }
