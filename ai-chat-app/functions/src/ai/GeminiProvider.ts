@@ -35,11 +35,13 @@ export class GeminiProvider implements AIProvider {
         if (!lastMessage) {
             throw new Error("No user message found in history.");
         }
+        
+        const instructionText = systemMessage ? systemMessage.content : "You are a helpful AI.";
 
-        // initialise chat with system instruction and history
+        // initialise chat with system instruction and history; SDK handles formatting
         const chat = this.model.startChat({
             history: pastMessages,
-            systemInstruction: systemMessage ? systemMessage.content : "You are a helpful AI.",
+            systemInstruction: instructionText
         });
 
         // send the new message and wait for the Promise
