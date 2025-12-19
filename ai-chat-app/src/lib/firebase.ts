@@ -2,7 +2,7 @@
 import { initializeApp } from "firebase/app";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
-import { getFunctions } from "firebase/functions";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -20,3 +20,9 @@ const app = initializeApp(firebaseConfig);
 // Initialize Cloud Functions and set the region to London
 // (Must match the region we deployed to: europe-west2)
 export const functions = getFunctions(app, "europe-west2");
+
+// If we are developing locally, connect to the emulator
+if (window.location.hostname === 'localhost') {
+  console.log("🔌 Connecting to Firebase Functions Emulator");
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+}

@@ -53,46 +53,46 @@ const ARCHITECT_PERSONA = `
 `;
 
 // onCall listens for HTTP requests from the React app, unwraps it, checks if the user is logged in, parses the JSON, handles CORS and hands us the data.
-export const generateResponse = onCall({ secrets: ["GEMINI_API_KEY"] }, async (request) => {
+export const generateResponse = onCall(
+  {
+    secrets: ["GEMINI_API_KEY"],
+  },
+  async (request) => {
+    const apiKey = process.env.GEMINI_API_KEY;
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    logger.error("GEMINI_API_KEY is missing via process.env");
-    throw new HttpsError('internal', 'Server config error');
+    // initialise provider
+    const aiProvider = new GeminiProvider(apiKey || "");
+
+    // extract the data from the request which was sent from our frontend
+    const data = request.data as ChatRequest;
+
+    if (!data.history || data.history.length === 0) {
+      throw new HttpsError('invalid-argument', 'History is required');
+    }
+
+    const mode = data.mode || 'chat';
+    const systemInstruction = mode === 'plan' ? ARCHITECT_PERSONA : ASSISTANT_PERSONA;
+
+    logger.info(`Generating response in ${mode} mode`);
+
+    const messages: Message[] = [
+      { role: 'system', content: systemInstruction },
+      ...data.history
+    ];
+
+    try {
+      // send the data to the AI provider and get the response
+      const response = await aiProvider.generateResponse(messages);
+      
+      return {
+        content: response.content,
+        type: mode === 'plan' ? 'plan' : 'text'
+      };
+
+    } catch (error) {
+      logger.error("AI Generation Failed:", error);
+      throw new HttpsError('internal', 'Failed to generate response');
+    }
   }
-
-  // initialise provider
-  const aiProvider = new GeminiProvider(apiKey);
-
-  // extract the data from the request which was sent from our frontend
-  const data = request.data as ChatRequest;
-
-  if (!data.history || data.history.length === 0) {
-    throw new HttpsError('invalid-argument', 'History is required');
-  }
-
-  const mode = data.mode || 'chat';
-  const systemInstruction = mode === 'plan' ? ARCHITECT_PERSONA : ASSISTANT_PERSONA;
-
-  logger.info(`Generating response in ${mode} mode`);
-
-  const messages: Message[] = [
-    { role: 'system', content: systemInstruction },
-    ...data.history
-  ];
-
-  try {
-    // send the data to the AI provider and get the response
-    const response = await aiProvider.generateResponse(messages);
-    
-    return {
-      content: response.content,
-      type: mode === 'plan' ? 'plan' : 'text'
-    };
-
-  } catch (error) {
-    logger.error("AI Generation Failed:", error);
-    throw new HttpsError('internal', 'Failed to generate response');
-  }
-});
+);
 
