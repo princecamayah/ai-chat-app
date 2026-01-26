@@ -10,48 +10,35 @@ export interface Message {
 interface ChatState {
     // -- state --
     messages: Message[];
-    inputs: {
-        goal: string;
-        role: string;
-        context: string;
-        format: string;
-        tone: string;
-    };
-    status: 'idle' | 'chatting' | 'reviewing'
+    status: 'discovery' | 'review' | 'execution';
+    activePlan: string | null; // stores the most recent plan
 
     // -- actions --
     addMessage: (msg: Message) => void;
-    updateInput: (field: keyof ChatState['inputs'], value: string) => void;
     setStatus: (status: ChatState['status']) => void;
+    setActivePlan: (plan: string) => void;
+    resetChat: () => void; // clears conversation history
 }
 
 export const useChatStore = create<ChatState>((set) => ({
     // -- initial values --
     messages: [],
-    inputs: {
-        goal: '',
-        role: '',
-        context: '',
-        format: '',
-        tone: '',
-    },
-    status: 'idle',
+    status: 'discovery',
+    activePlan: null,
 
     // -- action implementations --
     addMessage: (msg) =>
         set((state) => ({
             messages: [...state.messages, msg] // old messages + new one
         })),
-    
-    updateInput: (field, value) =>
-        set((state) => ({
-            inputs: {
-                ...state.inputs, // keep other inputs the same
-                [field]: value // update only the specific field
-            }
-        })),
 
     setStatus: (status) =>
-        set({status: status}),
+        set(() => ({ status })),
+
+    setActivePlan: (plan) =>
+        set(() => ({ activePlan: plan })),
+
+    resetChat:() =>
+        set(() => ({ messages: [] })),
 }));
 
