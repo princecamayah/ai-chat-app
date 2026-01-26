@@ -24,7 +24,7 @@ export class GeminiProvider implements AIProvider {
         const formattedContents = history
             .filter(m => m.role !== 'system') // remove system msg
             .map(m => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
+                role: m.role === 'assistant' ? 'model' : 'user', // Gemini uses the term "model" instead of "assistant"
                 parts: [{ text: m.content }]
             }));
 

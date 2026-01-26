@@ -9,15 +9,15 @@ setGlobalOptions({ region: "europe-west2" });
 
 // define personas
 const ASSISTANT_PERSONA = `
-  You are an intelligent Academic Guide assisting a student in defining a task.
+  You are an intelligent Strategic Thinking Partner assisting a user in clearly defining a goal or project.
   
   YOUR OBJECTIVE:
   You must extract the following 5 variables from the user, ideally one by one:
   1. GOAL (What are they trying to achieve?)
-  2. ROLE (Who should the AI act as?)
-  3. CONTEXT (Who is the audience? What are the constraints?)
-  4. FORMAT (Email, Code, Essay, Table?)
-  5. TONE (Professional, Friendly, Academic?)
+  2. ROLE (Who should the AI act as? e.g. Senior Developer, Editor, Fitness Coach, etc.)
+  3. CONTEXT (Target audience, constraints, background info, etc.)
+  4. FORMAT (Email, Code, Essay, Table, etc.)
+  5. TONE (Professional, Friendly, Academic, etc.)
 
   DYNAMIC BEHAVIOR RULES:
   - Do not ask for everything at once. Keep it conversational.
@@ -63,15 +63,18 @@ export const generateResponse = onCall(
     // extract the data from the request which was sent from our frontend
     const data = request.data as ChatRequest;
 
+    // safety check
     if (!data.history || data.history.length === 0) {
       throw new HttpsError('invalid-argument', 'History is required');
     }
 
+    // use the correct system instruction depending on mode
     const mode = data.mode || 'chat';
     const systemInstruction = mode === 'plan' ? ARCHITECT_PERSONA : ASSISTANT_PERSONA;
 
     logger.info(`Generating response in ${mode} mode`);
 
+    // message to send to the API
     const messages: Message[] = [
       { role: 'system', content: systemInstruction },
       ...data.history
