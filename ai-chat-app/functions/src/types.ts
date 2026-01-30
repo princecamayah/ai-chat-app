@@ -7,7 +7,8 @@ export interface Message {
 
 export interface ChatRequest {
     history: Message[];
-    mode: 'chat' | 'plan';
+    phase?: 'discovery' | 'review' | 'execution';
+    customPlan?: string;
 }
 
 // we use this as a "universal translator": no matter which AI we use, the final result returns only content and type, something the frontend can expect.

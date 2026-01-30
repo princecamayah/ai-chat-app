@@ -8,7 +8,7 @@ import { ChatRequest, Message } from "./types";
 setGlobalOptions({ region: "europe-west2" });
 
 // define personas
-const ASSISTANT_PERSONA = `
+const DISCOVERY_PROMPT = `
   You are an intelligent Strategic Thinking Partner assisting a user in clearly defining a goal or project.
   
   YOUR OBJECTIVE:
@@ -30,7 +30,7 @@ const ASSISTANT_PERSONA = `
   Review the conversation history, identify which of the 5 variables are missing, and ask for the most important missing one.
 `;
 
-const ARCHITECT_PERSONA = `
+const ARCHITECT_PROMPT = `
 You are an expert Prompt Architect.
 
 **Input Context:**
@@ -56,23 +56,41 @@ export const generateResponse = onCall(
   },
   async (request) => {
     const apiKey = process.env.GEMINI_API_KEY;
-
-    // initialise provider
-    const aiProvider = new GeminiProvider(apiKey || "");
-
-    // extract the data from the request which was sent from our frontend
-    const data = request.data as ChatRequest;
+    const aiProvider = new GeminiProvider(apiKey || ""); // initialise provider
+    const data = request.data as ChatRequest; // extract the data from the request which was sent from our frontend
 
     // safety check
     if (!data.history || data.history.length === 0) {
       throw new HttpsError('invalid-argument', 'History is required');
     }
 
-    // use the correct system instruction depending on mode
-    const mode = data.mode || 'chat';
-    const systemInstruction = mode === 'plan' ? ARCHITECT_PERSONA : ASSISTANT_PERSONA;
+    // determine system instruction based on the phase
+    const phase = data.phase || 'discovery';
+    let systemInstruction = '';
 
-    logger.info(`Generating response in ${mode} mode`);
+    switch (phase) {
+      case 'discovery':
+        systemInstruction = DISCOVERY_PROMPT;
+        break;
+
+      case 'review':
+        systemInstruction = ARCHITECT_PROMPT;
+        break;
+
+      case 'execution':
+        // we require the frontend to have sent us the plan in order to facilitate execution phase
+        if (!data.customPlan) {
+          throw new HttpsError('invalid-argument', 'Custom Plan is required for execution phase.');
+        }
+        systemInstruction = data.customPlan;
+        break;
+
+      default:
+        // fallback
+        systemInstruction = DISCOVERY_PROMPT;
+    }
+
+    logger.info(`Generating response in ${phase} phase`);
 
     // message to send to the API
     const messages: Message[] = [
@@ -86,7 +104,7 @@ export const generateResponse = onCall(
       
       return {
         content: response.content,
-        type: mode === 'plan' ? 'plan' : 'text'
+        type: phase === 'review' ? 'plan' : 'text'
       };
 
     } catch (error) {
