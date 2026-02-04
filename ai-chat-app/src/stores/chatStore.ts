@@ -1,21 +1,20 @@
 import { create } from 'zustand';
+import type { Message as APIMessage } from '../types';
 
-export interface Message {
+// create a specific type for the frontend that includes ID (we cannot add ID to types.ts without invalidating the API contract as the backend does not expect an ID)
+export interface ChatMessage extends APIMessage {
     id: string;
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    type?: 'text' | 'plan'; // optional, defaults to 'text' 
 }
 
 interface ChatState {
     // -- state --
-    messages: Message[];
-    status: 'discovery' | 'review' | 'execution';
+    messages: ChatMessage[];
+    phase: 'discovery' | 'review' | 'execution' | 'refinement';
     activePlan: string | null; // stores the most recent plan
 
     // -- actions --
-    addMessage: (msg: Message) => void;
-    setStatus: (status: ChatState['status']) => void;
+    addMessage: (msg: ChatMessage) => void;
+    setPhase: (phase: ChatState['phase']) => void;
     setActivePlan: (plan: string) => void;
     resetChat: () => void; // clears conversation history
 }
@@ -23,7 +22,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set) => ({
     // -- initial values --
     messages: [],
-    status: 'discovery',
+    phase: 'discovery',
     activePlan: null,
 
     // -- action implementations --
@@ -32,12 +31,13 @@ export const useChatStore = create<ChatState>((set) => ({
             messages: [...state.messages, msg] // old messages + new one
         })),
 
-    setStatus: (status) =>
-        set(() => ({ status })),
+    setPhase: (phase) =>
+        set(() => ({ phase })),
 
     setActivePlan: (plan) =>
         set(() => ({ activePlan: plan })),
 
+    // used when switching from review -> execution
     resetChat:() =>
         set(() => ({ messages: [] })),
 }));
