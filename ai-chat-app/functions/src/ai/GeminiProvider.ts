@@ -13,12 +13,16 @@ export class GeminiProvider implements AIProvider {
     // we use async to tell the computer to pause execution at specific lines of this function
     async generateResponse(history: Message[]): Promise<AIResponse> {
 
-        // filter for system message
+        // extract system message
         const systemMessage = history.find(m => m.role === 'system');
-        const instructionText = systemMessage ? systemMessage.content : "You are a helpful AI.";
+        const systemInstruction = systemMessage ? systemMessage.content : "You are a helpful AI.";
 
         console.log("DEBUG: System Message found?", !!systemMessage);
-        console.log("DEBUG: Instruction Text:", `"${instructionText}"`);
+        console.log("DEBUG: System instruction:", `"${systemInstruction}"`);
+
+        const modelName = "gemma-3-27b-it";
+        // check if model is gemini (supports system instructions) or gemma (does not support)
+        const isGemini = modelName.startsWith("gemini");
 
         // filter for chat history and translate syntax
         const formattedContents = history
@@ -28,14 +32,30 @@ export class GeminiProvider implements AIProvider {
                 parts: [{ text: m.content }]
             }));
 
+        if (!isGemini) {
+            if (formattedContents.length > 0) {
+                // prepend to the first existing user message
+                const originalText = formattedContents[0].parts[0].text;
+                formattedContents[0].parts[0].text = `[SYSTEM INSTRUCTION: ${systemInstruction}]\n\n${originalText}`
+            } else {
+                // if history is empty then create a fake user message
+                formattedContents.push({
+                    role: 'user',
+                    parts: [{ text: `[SYSTEM INSTRUCTION: ${systemInstruction}]`}]
+                });
+            }
+        }
+
         try {
             const result = await this.client.models.generateContent({
-                model: "gemini-2.5-flash",
+                model: "gemma-3-27b-it",
                 contents: formattedContents,
                 config: {
-                    systemInstruction: {
-                        parts: [{ text: instructionText }]
-                    },
+                    ...(isGemini ? {
+                        systemInstruction: {
+                            parts: [{ text: systemInstruction }]
+                        }
+                    } : {}),
                     temperature: 0.7, // controls sensitivity
                 }
             });
