@@ -100,6 +100,7 @@ export function ChatInput() {
     const handleGeneratePlan = async () => {
         setIsLoading(true);
 
+        // UI message
         addMessage({
             id: crypto.randomUUID(),
             role: 'assistant',
@@ -109,8 +110,27 @@ export function ChatInput() {
         try {
             const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
 
+            // map the UI messages (with IDs) to API messages
+            let apiHistory = messages.map(msg => ({
+                role: msg.role,
+                content: msg.content,
+                type: msg.type
+            }));
+
+            // insert a trigger message which (1) ensures the AI gives the plan and (2) prevents breaking the user -> AI -> user flow
+            apiHistory = [
+                ...apiHistory,
+                {
+                    role: 'user' as const,
+                    content: "Based on our conversation above, generate the structured System Instruction (Meta-Prompt) now. Return ONLY the prompt.",
+                    type: "text"
+                }
+            ];
+
+            console.log(apiHistory);
+
             const result = await generateResponse({
-                history: messages,
+                history: apiHistory, // pass sanitised history, not raw messages
                 phase: 'review' // send the review phase to trigger the Architect prompt
             });
 
@@ -187,7 +207,7 @@ export function ChatInput() {
     return (
         <div className="flex flex-col w-full gap-2">
             {/* Show "Generate Plan" only in Discovery mode if we have had enough messages */}
-            {phase === 'discovery' && messages.length > 8 && (
+            {phase === 'discovery' && messages.length > 10 && (
                 <div className="flex justify-center pb-2">
                     <button
                         onClick={handleGeneratePlan}
