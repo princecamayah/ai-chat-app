@@ -20,7 +20,7 @@ export class GeminiProvider implements AIProvider {
         console.log("DEBUG: System Message found?", !!systemMessage);
         console.log("DEBUG: System instruction:", `"${systemInstruction}"`);
 
-        const modelName = "gemma-3-27b-it";
+        const modelName = "gemma-3-12b-it";
         // check if model is gemini (supports system instructions) or gemma (does not support)
         const isGemini = modelName.startsWith("gemini");
 
@@ -60,7 +60,9 @@ export class GeminiProvider implements AIProvider {
                 }
             });
 
-            const responseText = result.text || "I'm sorry, I couldn;t generate a text response";
+            console.log("DEBUG: Raw Google Response:", JSON.stringify(result, null, 2));
+
+            const responseText = result.text || "I'm sorry, I couldn't generate a text response.";
 
             return {
                 content: responseText,

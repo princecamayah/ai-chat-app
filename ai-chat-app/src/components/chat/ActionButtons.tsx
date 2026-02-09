@@ -1,10 +1,10 @@
 import { useChatStore } from '../../stores/chatStore'
 
 export function ActionButtons() {
-    const setStatus = useChatStore((state) => state.setStatus);
+    const setPhase = useChatStore((state) => state.setPhase);
 
     const handleEdit = () => {
-        setStatus('chatting');
+        setPhase('discovery');
     }
 
     const handleApprove = () => {

@@ -3,12 +3,10 @@ import { useChatStore } from './stores/chatStore';
 import { MessageBubble } from './components/chat/MessageBubble';
 import { ChatInput } from './components/chat/ChatInput';
 import { GeneratedPlanCard } from './components/chat/GeneratedPlanCard';
-import { ActionButtons } from './components/chat/ActionButtons';
 
 function App() {
   // connect to the store  
   const messages = useChatStore((state) => state.messages);
-  const status = useChatStore((state) => state.status);
 
   // auto-scroll logic by attaching a ref to grab the bottom HTML element
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -61,11 +59,7 @@ function App() {
       {/* footer */}
       <footer className="p-4 bg-white border-t">
          <div className="mx-auto max-w-3xl">
-            {status === 'reviewing' ? (
-              <ActionButtons />
-            ) : (
-              <ChatInput />
-            )}
+            <ChatInput />
          </div>
       </footer>
 

@@ -27,7 +27,8 @@ const DISCOVERY_PROMPT = `
   - If the user gives a vague answer, ask a clarifying question.
   
   CURRENT STATE CHECK:
-  Review the conversation history, identify which of the 5 variables are missing, and ask for the most important missing one.
+  - Review the conversation history, identify which of the 5 variables are missing, and ask for the most important missing one.
+  - Once the user has provided all 5 variables, please prompt them to click the generate plan button. Do not generate anything yourself.
 `;
 
 const ARCHITECT_PROMPT = `
@@ -78,10 +79,12 @@ export const generateResponse = onCall(
         break;
 
       case 'execution':
+        // backend is stateless so it does not remember the plan we just generated
         // we require the frontend to have sent us the plan in order to facilitate execution phase
         if (!data.customPlan) {
           throw new HttpsError('invalid-argument', 'Custom Plan is required for execution phase.');
         }
+        // in the execution stage, the user does not need the discovery or architect prompt as the generated plan is the system instruction
         systemInstruction = data.customPlan;
         break;
 
