@@ -1,7 +1,9 @@
-import type { Message } from '../../stores/chatStore';
+import type { ChatMessage } from '../../stores/chatStore';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MessageBubbleProps {
-    message: Message;
+    message: ChatMessage;
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
@@ -16,9 +18,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                         : 'bg-gray-400 text-white rounded-bl-none'
                 }`}
             >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
-                </p>
+                <div className="text-sm leading-relaxed break-words">
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            // Tailwind resets list styles, so we re-add them
+                            ul: ({node, ...props}) => <ul className='list-disc ml-4 mb-2' {...props} />,
+                            ol: ({node, ...props}) => <ol className='list-decimal ml-4 mb-2' {...props} />,
+                            // add margin to paragraphs
+                            p: ({node, ...props}) => <p className='mb-2 last:mb-0' {...props} />,
+                            // style links
+                            a: ({node, ...props}) => <a className='underline font-bold' target='_blank' rel='noopener noreferrer' {...props} />
+                        }}
+                    >
+                        {message.content}
+                    </ReactMarkdown>    
+                </div>
             </div>
         </div>
     )
