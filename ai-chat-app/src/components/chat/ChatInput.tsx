@@ -56,11 +56,23 @@ export function ChatInput() {
             
             // create a sanitised history (used for backend)
             // we remove the ID to satisfy the API contract
-            const apiHistory = uiHistory.map(msg => ({
+            let apiHistory = uiHistory.map(msg => ({
                 role: msg.role,
                 content: msg.content,
                 type: msg.type
             }))
+
+            // if the first message (i.e. welcome message) is from the assistant, the API will complain, so must have a hidden user message first
+            if (apiHistory.length > 0 && apiHistory[0].role === 'assistant') {
+                apiHistory = [
+                    {
+                        role: 'user',
+                        content: 'Hello.',
+                        type: 'text'
+                    },
+                    ...apiHistory
+                ];
+            }
 
             // result contains the metadata about the network request
             const result = await generateResponse({
@@ -116,6 +128,18 @@ export function ChatInput() {
                 content: msg.content,
                 type: msg.type
             }));
+
+            // if the first message (i.e. welcome message) is from the assistant, the AI API might complain, so must have a hidden user message first
+            if (apiHistory.length > 0 && apiHistory[0].role === 'assistant') {
+                apiHistory = [
+                    {
+                        role: 'user',
+                        content: 'Hello.',
+                        type: 'text'
+                    },
+                    ...apiHistory
+                ];
+            }
 
             // insert a trigger message which (1) ensures the AI gives the plan and (2) prevents breaking the user -> AI -> user flow
             apiHistory = [
