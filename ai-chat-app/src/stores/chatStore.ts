@@ -6,6 +6,22 @@ export interface ChatMessage extends APIMessage {
     id: string;
 }
 
+const WELCOME_MSG: ChatMessage = {
+    id: 'intro-1',
+    role: 'assistant',
+    type: 'text',
+    content: `Hello! I am here to assist you on your task.
+
+I work a little differently to other AI - I use a structured 3-phase approach: think of it like constructing a blueprint for a house before you build it.
+
+1. First, I'll ask a few questions to clarify your **Goal**, **Details**, and **Preferences**.
+2. Then, I'll generate a **Blueprint**, helping you to see if I've understood your task accurately.
+3. Finally, you'll have the opportunity to refine your blueprint, and once you approve it, we will **Execute** it.
+
+*To get started, tell me: what is your **goal** or **project** you want to work on today?*
+`
+};
+
 interface ChatState {
     // -- state --
     messages: ChatMessage[];
@@ -21,7 +37,7 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>((set) => ({
     // -- initial values --
-    messages: [],
+    messages: [WELCOME_MSG],
     phase: 'discovery',
     activePlan: null,
 
