@@ -4,6 +4,34 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import type { AIResponse, ChatRequest } from '../../types';
 
+// helper function: transforms UI messages into an API-compatible history
+// (1) appends the user's message; (2) strips local IDs; (3) appends hidden user message to start
+function prepareApiHistory(currentMessages: any[], newMessageContent: string) {
+
+    // append new user message (UI format)
+    const rawHistory = [
+        ...currentMessages,
+        { role: 'user', content: newMessageContent, type: 'text'}
+    ];
+
+    // convert to API format (stripping the IDs)
+    let apiHistory = rawHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        type: msg.type || 'text'
+    }));
+
+    // if history starts with the AI assistant, inject a hidden "hello" message on behalf of the user
+    if (apiHistory.length > 0 && apiHistory[0].role === 'assistant') {
+        apiHistory = [
+            { role: 'user', content: 'Hello.', type: 'text'},
+            ...apiHistory
+        ];
+    }
+
+    return apiHistory;
+}
+
 export function ChatInput() {
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -37,42 +65,31 @@ export function ChatInput() {
         });
 
         try {
-            // construct the history including the new user message (used for UI state)
-            const uiHistory = [
-                ...messages,
-                { id: crypto.randomUUID(), role: 'user' as const, content: userText } // append the new message
-            ];
+            let promptToSend = userText;
 
-            // mode selection sends the appropriate phase to the backend to select the appropriate prompt (system instruction)
+            // --- likely not needed after implementing anchor & extend ---
+            // if refining, wrap the user's text in a strict instruction
+            // if (phase === 'refinement') {
+            //     promptToSend = `
+            //     Please modify the blueprint you have given me with this modification: "${userText}".
+                
+            //     Strict output rules:
+            //     1. Return the COMPLETE updated blueprint.
+            //     2. Do NOT add conversational filler (e.g. "Here is the updated blueprint").
+            //     `;
+            // }
+
+            // prepare history to send to the backend with new user message
+            const apiHistory = prepareApiHistory(messages, promptToSend);
+
+            // determine phase  
             let backendPhase: ChatRequest['phase'] = 'discovery';
-
-            if (phase === 'execution') backendPhase = 'execution'; // if in execution phase, we remain 
+            if (phase === 'execution') backendPhase = 'execution';
             else if (phase === 'refinement') backendPhase = 'review'; // if in refinement phase, we want to return to review phase to generate another plan
-            else backendPhase = 'discovery'; // if in discovery, we remain so long as the user is still typing
 
             // call the cloud function in index.ts
-            // We use the Generics <Input, Output> to tell TS that we promise to send ChatRequest, and we expect AIResponse back
+            // we use the Generics <Input, Output> to tell TS that we promise to send ChatRequest, and we expect AIResponse back
             const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
-            
-            // create a sanitised history (used for backend)
-            // we remove the ID to satisfy the API contract
-            let apiHistory = uiHistory.map(msg => ({
-                role: msg.role,
-                content: msg.content,
-                type: msg.type
-            }))
-
-            // if the first message (i.e. welcome message) is from the assistant, the API will complain, so must have a hidden user message first
-            if (apiHistory.length > 0 && apiHistory[0].role === 'assistant') {
-                apiHistory = [
-                    {
-                        role: 'user',
-                        content: 'Hello.',
-                        type: 'text'
-                    },
-                    ...apiHistory
-                ];
-            }
 
             // result contains the metadata about the network request
             const result = await generateResponse({
@@ -122,34 +139,11 @@ export function ChatInput() {
         try {
             const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
 
-            // map the UI messages (with IDs) to API messages
-            let apiHistory = messages.map(msg => ({
-                role: msg.role,
-                content: msg.content,
-                type: msg.type
-            }));
+            // define the hidden trigger prompt that asks the AI to generate the plan
+            const triggerPrompt = "Based on our conversation above, generate the structured System Instruction (Meta-Prompt) now. Return ONLY the prompt.";
 
-            // if the first message (i.e. welcome message) is from the assistant, the AI API might complain, so must have a hidden user message first
-            if (apiHistory.length > 0 && apiHistory[0].role === 'assistant') {
-                apiHistory = [
-                    {
-                        role: 'user',
-                        content: 'Hello.',
-                        type: 'text'
-                    },
-                    ...apiHistory
-                ];
-            }
-
-            // insert a trigger message which (1) ensures the AI gives the plan and (2) prevents breaking the user -> AI -> user flow
-            apiHistory = [
-                ...apiHistory,
-                {
-                    role: 'user' as const,
-                    content: "Based on our conversation above, generate the structured System Instruction (Meta-Prompt) now. Return ONLY the prompt.",
-                    type: "text"
-                }
-            ];
+            // prepare the history for the backend + append the trigger prompt as a user message
+            const apiHistory = prepareApiHistory(messages, triggerPrompt);
 
             console.log(apiHistory);
 
