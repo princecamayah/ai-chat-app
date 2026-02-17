@@ -8,7 +8,7 @@ export interface Message {
 // data sent to the backend
 export interface ChatRequest {
     history: Message[];
-    phase?: 'discovery' | 'review' | 'execution';
+    phase?: 'discovery' | 'review' | 'refinement' | 'execution';
     customPlan?: string;
 }
 

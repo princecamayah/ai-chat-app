@@ -25,7 +25,7 @@ I work a little differently to other AI - I use a structured 3-phase approach: t
 interface ChatState {
     // -- state --
     messages: ChatMessage[];
-    phase: 'discovery' | 'review' | 'execution' | 'refinement';
+    phase: 'discovery' | 'review' | 'refinement' | 'execution';
     activePlan: string | null; // stores the most recent plan
 
     // -- actions --
