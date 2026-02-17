@@ -6,7 +6,38 @@ import type { AIResponse, ChatRequest } from '../../types';
 
 // helper function: transforms UI messages into an API-compatible history
 // (1) appends the user's message; (2) strips local IDs; (3) appends hidden user message to start
-function prepareApiHistory(currentMessages: any[], newMessageContent: string) {
+// new logic (4) in refinement phase, we slice the history and show the latest plan and messages from there onwards
+function prepareApiHistory(currentMessages: any[], newMessageContent: string, phase: string, activePlan: string | null) {
+
+    // initialise the new sliced history with the full history
+    let historySegment = [...currentMessages];
+
+    // if refining, drop all history prior to the active plan
+    if (phase === 'refinement' && activePlan) {
+        // find index of the last message of type plan
+        let lastPlanIndex = -1;
+        for (let i = currentMessages.length - 1; i >= 0; i--) {
+            if (currentMessages[i].type === 'plan') {
+                lastPlanIndex = i;
+                break;
+            }
+        }
+
+        // if found, slice the history
+        if (lastPlanIndex !== -1) {
+            historySegment = currentMessages.slice(lastPlanIndex + 1);
+
+            // inject the plan as the first message from the user
+            const anchorMessage = {
+                role: 'user',
+                content: `Here is the current plan we are refining:\n\n${activePlan}`,
+                type: 'text'
+            };
+
+            // prepend plan to the messages that comes directly after
+            historySegment = [anchorMessage, ...historySegment];
+        }
+    }
 
     // append new user message (UI format)
     const rawHistory = [
@@ -65,27 +96,13 @@ export function ChatInput() {
         });
 
         try {
-            let promptToSend = userText;
-
-            // --- likely not needed after implementing anchor & extend ---
-            // if refining, wrap the user's text in a strict instruction
-            // if (phase === 'refinement') {
-            //     promptToSend = `
-            //     Please modify the blueprint you have given me with this modification: "${userText}".
-                
-            //     Strict output rules:
-            //     1. Return the COMPLETE updated blueprint.
-            //     2. Do NOT add conversational filler (e.g. "Here is the updated blueprint").
-            //     `;
-            // }
-
             // prepare history to send to the backend with new user message
-            const apiHistory = prepareApiHistory(messages, promptToSend);
+            const apiHistory = prepareApiHistory(messages, userText, phase, activePlan);
 
             // determine phase  
             let backendPhase: ChatRequest['phase'] = 'discovery';
             if (phase === 'execution') backendPhase = 'execution';
-            else if (phase === 'refinement') backendPhase = 'review'; // if in refinement phase, we want to return to review phase to generate another plan
+            else if (phase === 'refinement') backendPhase = 'refinement';
 
             // call the cloud function in index.ts
             // we use the Generics <Input, Output> to tell TS that we promise to send ChatRequest, and we expect AIResponse back
@@ -109,7 +126,7 @@ export function ChatInput() {
                 type: data.type
             });
 
-            // if we were refining, update plan and display approve/edit buttons
+            // if in refinement phase AND a new plan has been outputted, update plan and switch to review phase
             if (phase === 'refinement' && data.type === 'plan') {
                 setActivePlan(data.content);
                 setPhase('review'); // return to review phase
@@ -143,7 +160,7 @@ export function ChatInput() {
             const triggerPrompt = "Based on our conversation above, generate the structured System Instruction (Meta-Prompt) now. Return ONLY the prompt.";
 
             // prepare the history for the backend + append the trigger prompt as a user message
-            const apiHistory = prepareApiHistory(messages, triggerPrompt);
+            const apiHistory = prepareApiHistory(messages, triggerPrompt, phase, activePlan);
 
             console.log(apiHistory);
 
