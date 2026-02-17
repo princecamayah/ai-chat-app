@@ -50,6 +50,36 @@ Synthesize this conversation into a single, high-performance "System Instruction
 Return ONLY the final System Instruction text. Do not provide preamble, analysis, or conversational filler.
 `;
 
+const REFINEMENT_PROMPT = `
+You are an expert Prompt Architect, helping a user make modifications to their current prompt. 
+
+**Context:**
+1. You will receive their current prompt.
+2. You will receive a conversation history that follows after the prompt of the user's desired modification(s) and potentially any other queries.
+
+**Your Goal:**
+Analyse the user's LATEST message to determine their intent:
+
+**Scenario A: Modification**
+*If the user requests a change, addition, deletion or pivot.
+* **Action:** Apply only the change to the prompt (plan).
+* **Output:**
+  * "type": "plan"
+  * "content": The **COMPLETE, FULLY UPDATED** prompt in Markdown. Do not summarise. Do not use placeholders.
+
+**Scenario B: Discussion (e.g. the user has a question)
+* If the user asks "Why?", "What does this mean?", or seeks clarification *without* changing the logic.
+* **Action:** Answer the question helpfully.
+* **Output:**
+  * "type": "text"
+  * "content": Your answer to the user.
+
+**STRICT OUTPUT RULES:**
+* You must return **ONLY** a valid JSON object.
+* Do NOT include Markdown formatting (like \`\`\`json).
+* Format: { "type": "plan" | "text", "content": "..." }
+`;
+
 // onCall listens for HTTP requests from the React app, unwraps it, checks if the user is logged in, parses the JSON, handles CORS and hands us the data.
 export const generateResponse = onCall(
   {
@@ -78,6 +108,10 @@ export const generateResponse = onCall(
         systemInstruction = ARCHITECT_PROMPT;
         break;
 
+      case 'refinement':
+        systemInstruction = REFINEMENT_PROMPT;
+        break;
+
       case 'execution':
         // backend is stateless so it does not remember the plan we just generated
         // we require the frontend to have sent us the plan in order to facilitate execution phase
@@ -104,10 +138,48 @@ export const generateResponse = onCall(
     try {
       // send the data to the AI provider and get the response
       const response = await aiProvider.generateResponse(messages);
+      let content = response.content;
+
+      // logic for refinement phase (JSON parsing)
+      if (phase === 'refinement') {
+        // clean the output via substring extraction
+        const firstBrace = content.indexOf('{');
+        const lastBrace = content.indexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          const jsonString = content.substring(firstBrace, lastBrace + 1);
+          try {
+            // parse the JSON
+            const parsed = JSON.parse(jsonString);
+            
+            // return the content and type determined by the AI
+            return {
+              content: parsed.content,
+              type: parsed.type
+            };
+          } catch (parseError) {
+            logger.error("Failed to parse Refinement JSON:", content);
+            // fallback: if AI fails to output JSON, treat it as a text response
+            return {
+              content: content,
+              type: 'text'
+            };
+          }        
+        }
+      }
       
+      // logic for review phase (return plan)
+      if (phase === 'review') {
+        return {
+          content: content,
+          type: 'plan'
+        };
+      }
+
+      // logic for other phases (standard chat)
       return {
-        content: response.content,
-        type: phase === 'review' ? 'plan' : 'text'
+        content: content,
+        type: 'text'
       };
 
     } catch (error) {
