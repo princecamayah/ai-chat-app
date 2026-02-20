@@ -140,32 +140,25 @@ export const generateResponse = onCall(
       const response = await aiProvider.generateResponse(messages);
       let content = response.content;
 
-      // logic for refinement phase (JSON parsing)
+      // logic for refinement phase (regex)
       if (phase === 'refinement') {
-        // clean the output via substring extraction
-        const firstBrace = content.indexOf('{');
-        const lastBrace = content.indexOf('}');
 
-        if (firstBrace !== -1 && lastBrace !== -1) {
-          const jsonString = content.substring(firstBrace, lastBrace + 1);
-          try {
-            // parse the JSON
-            const parsed = JSON.parse(jsonString);
-            
-            // return the content and type determined by the AI
-            return {
-              content: parsed.content,
-              type: parsed.type
-            };
-          } catch (parseError) {
-            logger.error("Failed to parse Refinement JSON:", content);
-            // fallback: if AI fails to output JSON, treat it as a text response
-            return {
-              content: content,
-              type: 'text'
-            };
-          }        
-        }
+        // extract the type
+        const typeMatch = content.match(/"type"\s*:\s*"([^"]+)"/);
+        const extractedType = typeMatch ? typeMatch[1] : 'text';
+
+        // extract the content
+        const contentMatch = content.match(/"content"\s*:\s*"([\s\S]*)"\s*}/);
+        let extractedContent = contentMatch ? contentMatch[1] : content;
+
+        // sanitise and reformat escaped characters
+        extractedContent = extractedContent.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+
+        return {
+          content: extractedContent.trim(),
+          type: extractedType === 'plan' ? 'plan' : 'text'
+        };
+        
       }
       
       // logic for review phase (return plan)
