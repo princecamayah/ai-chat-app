@@ -37,6 +37,8 @@ function prepareApiHistory(currentMessages: any[], newMessageContent: string, ph
             // prepend plan to the messages that comes directly after
             historySegment = [anchorMessage, ...historySegment];
         }
+
+        console.log(historySegment);
     }
 
     // append new user message (UI format)
@@ -146,7 +148,10 @@ export function ChatInput() {
     const handleGeneratePlan = async () => {
         setIsLoading(true);
 
-        // UI message
+        // UI message: this updates the global store but does not affect the local messages variable
+        // therefore apiHistory defined below does not include it.
+        // this is because when the user clicks generate plan, React takes a snapshot of the history
+        // at that very moment and stores it in the messages variable.
         addMessage({
             id: crypto.randomUUID(),
             role: 'assistant',
@@ -154,8 +159,6 @@ export function ChatInput() {
         });
 
         try {
-            const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
-
             // define the hidden trigger prompt that asks the AI to generate the plan
             const triggerPrompt = "Based on our conversation above, generate the structured System Instruction (Meta-Prompt) now. Return ONLY the prompt.";
 
@@ -163,6 +166,8 @@ export function ChatInput() {
             const apiHistory = prepareApiHistory(messages, triggerPrompt, phase, activePlan);
 
             console.log(apiHistory);
+
+            const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
 
             const result = await generateResponse({
                 history: apiHistory, // pass sanitised history, not raw messages
@@ -197,12 +202,57 @@ export function ChatInput() {
         }
     };
 
-    // handle the user clicking the approve plan button
-    const handleApprove = () => {
-        resetChat(); // clear the current message history in the store (but remains in the UI)
+    // handle the user clicking the approve plan button, executing the plan
+    const handleApprove = async () => {
+        setIsLoading(true);
+
+        // clear UI history
+        resetChat();
 
         // switch to execution mode
         setPhase('execution');
+
+        addMessage({
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: "Plan approved. Executing your blueprint now..."
+        });
+
+        try {
+            // construct a hidden user message to use as the initial message
+            // since we are not sending history anymore but an empty array as a clean slate
+            const hiddenMsg = "Please execute the instruction given above."
+
+            const apiHistory = prepareApiHistory([], hiddenMsg, 'execution', activePlan)
+
+            const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
+
+            const result = await generateResponse({
+                history: apiHistory,
+                phase: 'execution',
+                customPlan: activePlan ?? undefined // backend now uses the plan as a system instruction
+            });
+
+            const data = result.data;
+
+            // render the output
+            addMessage({
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: data.content,
+                type: 'text'
+            });
+
+        } catch (error) {
+            console.error("Execution failed:", error);
+            addMessage({
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                content: "Sorry, I encountered an error while trying to execute the plan."
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // handle the user clicking the edit plan button
