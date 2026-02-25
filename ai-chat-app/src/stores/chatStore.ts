@@ -40,6 +40,7 @@ I require a short report detailing suitable coat options. Before presenting the 
 
 interface ChatState {
     // -- state --
+    userId: string | null; // tracks current anonymous user
     activeConversationId: string | null; // tracks currently open chat
     conversations: ConversationMeta[]; // the history list for the sidebar
     messages: ChatMessage[];
@@ -47,6 +48,7 @@ interface ChatState {
     activePlan: string | null; // stores the most recent plan
 
     // -- actions --
+    setUserId: (id: string | null) => void;
     addMessage: (msg: ChatMessage) => void;
     setPhase: (phase: ChatState['phase']) => void;
     setActivePlan: (plan: string) => void;
@@ -58,6 +60,7 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>((set) => ({
     // -- initial values --
+    userId: null,
     activeConversationId: null,
     conversations: [],  
     messages: [WELCOME_MSG],
@@ -70,6 +73,9 @@ export const useChatStore = create<ChatState>((set) => ({
     // activePlan: TEST_PLAN.content,
 
     // -- action implementations --
+    setUserId: (id) =>
+        set(() => ({ userId: id })),
+
     addMessage: (msg) =>
         // set expects you to give it a function that returns an object
         set((state) => ({

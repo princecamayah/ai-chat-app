@@ -1,12 +1,35 @@
-import { useEffect, useRef } from 'react';
+import { use, useEffect, useRef } from 'react';
 import { useChatStore } from './stores/chatStore';
 import { MessageBubble } from './components/chat/MessageBubble';
 import { ChatInput } from './components/chat/ChatInput';
 import { GeneratedPlanCard } from './components/chat/GeneratedPlanCard';
+import { auth } from './lib/firebase'
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 
-function App() {
-  // connect to the store  
+export default function App() {
+  // connect to the store
   const messages = useChatStore((state) => state.messages);
+  const setUserId = useChatStore((state) => state.setUserId);
+
+  useEffect(() => {
+    // set up the listener
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // if user found, save their anonymous UID to the store
+        console.log("User is signed in with UID:", user.uid);
+        setUserId(user.uid);
+      } else {
+        // if no user found, we need to create a new anonymous session
+        console.log("No user found. Signing in anonymously...");
+        signInAnonymously(auth).catch((error) => {
+          console.error("Error signing in anonymously:", error);
+        });
+      }
+    });
+
+    // clean up: forces the listener to stop if the component ever unmounts (preventing memory leaks)
+    return () => unsubscribe();
+  }, [setUserId]); 
 
   // auto-scroll logic by attaching a ref to grab the bottom HTML element
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -66,5 +89,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
