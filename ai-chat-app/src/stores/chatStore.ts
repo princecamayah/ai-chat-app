@@ -6,6 +6,13 @@ export interface ChatMessage extends APIMessage {
     id: string;
 }
 
+// define the shape of the sidebar data
+export interface ConversationMeta {
+    id: string;
+    title: string;
+    updatedAt: number; // Unix timestamp
+}
+
 const WELCOME_MSG: ChatMessage = {
     id: 'intro-1',
     role: 'assistant',
@@ -22,8 +29,19 @@ I work a little differently to other AI - I use a structured 3-phase approach: t
 `
 };
 
+const TEST_PLAN: ChatMessage = {
+    id: 'test-plan-1',
+    role: 'assistant',
+    type: 'plan',
+    content: `You are an expert Research Assistant specializing in outerwear. I need you to help me find a suitable winter coat. Your responses should be friendly and helpful, yet maintain a professional tone. I am looking for a coat for myself, a man, to wear to work where smart attire is expected. The coat must be suitable for harsh UK winter weather – consistently cold and wet. My budget is £200.
+
+I require a short report detailing suitable coat options. Before presenting the report, you will Think Step-by-Step to ensure you fully understand my needs and to structure your research effectively. This includes considering coat types (e.g., trench coats, pea coats, duffle coats, parkas), materials (e.g., wool, synthetic blends, waterproof membranes), and key features (e.g., insulation, hood, pockets). Prioritize coats that balance warmth, weather protection, and a smart appearance appropriate for a professional work environment. The report should clearly outline the pros and cons of each suggested option, and where possible, provide examples within my budget. Always explain technical terms in a clear and accessible way. Do not include purchasing links; focus solely on providing informative research.`
+};
+
 interface ChatState {
     // -- state --
+    activeConversationId: string | null; // tracks currently open chat
+    conversations: ConversationMeta[]; // the history list for the sidebar
     messages: ChatMessage[];
     phase: 'discovery' | 'review' | 'refinement' | 'execution';
     activePlan: string | null; // stores the most recent plan
@@ -33,16 +51,27 @@ interface ChatState {
     setPhase: (phase: ChatState['phase']) => void;
     setActivePlan: (plan: string) => void;
     resetChat: () => void; // clears conversation history
+    setConversations: (conversations: ConversationMeta[]) => void;
+    setActiveConversation: (id: string | null) => void;
+    startNewChat: () => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
     // -- initial values --
+    activeConversationId: null,
+    conversations: [],  
     messages: [WELCOME_MSG],
     phase: 'discovery',
     activePlan: null,
 
+    // TEST INITIAL VALUES (REFINEMENT)
+    // messages: [TEST_PLAN],
+    // phase: 'review',
+    // activePlan: TEST_PLAN.content,
+
     // -- action implementations --
     addMessage: (msg) =>
+        // set expects you to give it a function that returns an object
         set((state) => ({
             messages: [...state.messages, msg] // old messages + new one
         })),
@@ -54,7 +83,21 @@ export const useChatStore = create<ChatState>((set) => ({
         set(() => ({ activePlan: plan })),
 
     // used when switching from review -> execution
-    resetChat:() =>
+    resetChat: () =>
         set(() => ({ messages: [] })),
+
+    setConversations: (conversations) =>
+        set(() => ({ conversations })),
+
+    setActiveConversation: (id) =>
+        set(() => ({ activeConversationId: id })),
+
+    startNewChat: () => 
+        set(() => ({
+            activeConversationId: null,
+            messages: [WELCOME_MSG],
+            phase: 'discovery',
+            activePlan: null
+        })),
 }));
 
