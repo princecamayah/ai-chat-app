@@ -3,6 +3,8 @@ import { useChatStore } from '../../stores/chatStore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import type { AIResponse, ChatRequest } from '../../types';
+import type { ChatMessage } from '../../stores/chatStore';
+import { createNewConversation, addMessageToConversation, updateConversationState, clearConversationHistory } from '@/lib/firebaseHelpers';
 
 // helper function: transforms UI messages into an API-compatible history
 // (1) appends the user's message; (2) strips local IDs; (3) appends hidden user message to start
@@ -47,12 +49,14 @@ function prepareApiHistory(currentMessages: any[], newMessageContent: string, ph
         { role: 'user', content: newMessageContent, type: 'text'}
     ];
 
-    // convert to API format (stripping the IDs)
-    let apiHistory = rawHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        type: msg.type || 'text'
-    }));
+    // convert to API format (stripping the IDs and filtering out transient messages)
+    let apiHistory = rawHistory
+        .filter(msg => msg.role !== 'transient')
+        .map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            type: msg.type || 'text'
+        }));
 
     // if history starts with the AI assistant, inject a hidden "hello" message on behalf of the user
     if (apiHistory.length > 0 && apiHistory[0].role === 'assistant') {
@@ -73,11 +77,14 @@ export function ChatInput() {
     const messages = useChatStore((state) => state.messages);
     const phase = useChatStore((state) => state.phase);
     const activePlan = useChatStore((state) => state.activePlan);
+    const userId = useChatStore((state) => state.userId);
+    const activeConversationId = useChatStore((state) => state.activeConversationId);
 
     const addMessage = useChatStore((state) => state.addMessage);
     const setPhase = useChatStore((state) => state.setPhase);
     const setActivePlan = useChatStore((state) => state.setActivePlan);
     const resetChat = useChatStore((state) => state.resetChat);
+    const setActiveConversation = useChatStore((state) => state.setActiveConversation);
 
     // arrow function means create a variable handleSend and set it equal to a function that takes no inputs and that runs the following code
     // this function handles the standard chat message sent from the chat input area
@@ -90,14 +97,34 @@ export function ChatInput() {
         setInputText(''); // clear input
         setIsLoading(true);
 
-        // optimistic UI update: update the global store with the user message
-        addMessage({
+        // create the message object
+        const userMessage: ChatMessage = {
             id: crypto.randomUUID(), // built-in JS function for random IDs
-            role: 'user' as const,
-            content: userText
-        });
+            role: 'user',
+            content: userText,
+            type: 'text'
+        };
+
+        // optimistic UI update: update the global store with the user message
+        addMessage(userMessage);
+
+        // keep a local reference of the conversation id
+        let currentConvId = activeConversationId;
 
         try {
+            // save user message in the database
+            if (userId) {
+                if (!currentConvId) {
+                    // path 1: brand new chat
+                    currentConvId = await createNewConversation(userId, userMessage);
+                    // update active conversation id in the Zustand store
+                    setActiveConversation(currentConvId);
+                } else {
+                    // path 2: existing chat
+                    await addMessageToConversation(currentConvId, userMessage);
+                }
+            }
+
             // prepare history to send to the backend with new user message
             const apiHistory = prepareApiHistory(messages, userText, phase, activePlan);
 
@@ -120,18 +147,31 @@ export function ChatInput() {
             // result.data contains the actual JSON object returned from the backend function in index.ts
             const data = result.data;
 
-            // add the AI response message to the store
-            addMessage({
+            // create AI response message
+            const aiMessage: ChatMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
                 content: data.content,
                 type: data.type
-            });
+            };
+
+            // add the AI response message to the store
+            addMessage(aiMessage);
+
+            // save the AI response message to the database
+            if (userId && currentConvId) {
+                await addMessageToConversation(currentConvId, aiMessage);
+            }
 
             // if in refinement phase AND a new plan has been outputted, update plan and switch to review phase
             if (phase === 'refinement' && data.type === 'plan') {
                 setActivePlan(data.content);
                 setPhase('review'); // return to review phase
+
+                // sync the current state to the database
+                if (currentConvId) {
+                    await updateConversationState(currentConvId, 'review', data.content);
+                }
             }
         } catch (error) {
             console.error('Error generating AI response:', error);
@@ -146,6 +186,12 @@ export function ChatInput() {
     }
 
     const handleGeneratePlan = async () => {
+        // ensure we have a database connection
+        if (!userId || !activeConversationId) {
+            console.error("Cannot generate plan: missing user or conversation ID.");
+            return;
+        }
+
         setIsLoading(true);
 
         // UI message: this updates the global store but does not affect the local messages variable
@@ -154,8 +200,9 @@ export function ChatInput() {
         // at that very moment and stores it in the messages variable.
         addMessage({
             id: crypto.randomUUID(),
-            role: 'assistant',
-            content: "Analysing our conversation to generate your plan..."
+            role: 'transient',
+            content: "Analysing our conversation to generate your plan...",
+            type: 'text'
         });
 
         try {
@@ -164,8 +211,6 @@ export function ChatInput() {
 
             // prepare the history for the backend + append the trigger prompt as a user message
             const apiHistory = prepareApiHistory(messages, triggerPrompt, phase, activePlan);
-
-            console.log(apiHistory);
 
             const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
 
@@ -176,25 +221,34 @@ export function ChatInput() {
 
             const data = result.data;
 
-            // save plan to the store as the most updated plan
-            setActivePlan(data.content);
-
-            // add the plan to the message history store
-            addMessage({
+            // create the plan message
+            const planMsg: ChatMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
                 content: data.content,
                 type: 'plan'
-            });
+            }
+
+            // save plan to the store as the most updated plan
+            setActivePlan(data.content);
+
+            // add the plan to the message history store
+            addMessage(planMsg);
 
             // switch to review mode -> approve and edit plan buttons appear
             setPhase('review');
+
+            // save AI's response message to the database
+            await addMessageToConversation(activeConversationId, planMsg);
+
+            // update database state
+            await updateConversationState(activeConversationId, 'review', data.content);
 
         } catch (error) {
             console.error('Plan generation failed:', error);
             addMessage({
                 id: crypto.randomUUID(),
-                role: 'assistant',
+                role: 'transient', // errors being transient prevent them from affecting AI's responses
                 content: "Failed to generate plan. Please try again."
             });
         } finally {
@@ -204,51 +258,85 @@ export function ChatInput() {
 
     // handle the user clicking the approve plan button, executing the plan
     const handleApprove = async () => {
+        // ensure we have a database connection + plan
+        if (!userId || !activeConversationId || !activePlan) {
+            console.error("Cannot approve plan: missing context.");
+            return;
+        }
+
         setIsLoading(true);
 
-        // clear UI history
-        resetChat();
-
-        // switch to execution mode
-        setPhase('execution');
-
-        addMessage({
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: "Plan approved. Executing your blueprint now..."
-        });
-
         try {
-            // construct a hidden user message to use as the initial message
-            // since we are not sending history anymore but an empty array as a clean slate
-            const hiddenMsg = "Please execute the instruction given above."
+            // clear the database subcollection pre-execution history
+            console.log("Clearing pre-execution history from database...");
+            await clearConversationHistory(activeConversationId);
 
-            const apiHistory = prepareApiHistory([], hiddenMsg, 'execution', activePlan)
+            // update the conversation state
+            await updateConversationState(activeConversationId, 'execution', activePlan);
+
+            // clear the Zustand store, which directly affects the current rendering of the UI
+            resetChat();
+
+            setPhase('execution');
+            
+
+            // create an explicit trigger message to execute the plan which will act as the user's first post-execution message
+            const executionText = "Hello. I am ready to begin. Please proceed with generating the output exactly as described in your system instructions.";
+            const executionMsg: ChatMessage = {
+                id: crypto.randomUUID(),
+                role: 'user',
+                content: executionText,
+                type: 'text'
+            };
+
+            // add the execution message to store
+            addMessage(executionMsg);
+
+            // save the execution message to database
+            await addMessageToConversation(activeConversationId, executionMsg);
+
+            // transient message replying to plan execution
+            addMessage({
+                id: crypto.randomUUID(),
+                role: 'transient',
+                content: "Plan approved. Executing your blueprint now...",
+                type: 'text'
+            });
+
+            // prepare API history, passing the execution message with an empty history
+            const apiHistory = prepareApiHistory([], executionText, 'execution', activePlan);
 
             const generateResponse = httpsCallable<ChatRequest, AIResponse>(functions, 'generateResponse');
 
             const result = await generateResponse({
                 history: apiHistory,
                 phase: 'execution',
-                customPlan: activePlan ?? undefined // backend now uses the plan as a system instruction
+                customPlan: activePlan ?? undefined
             });
 
             const data = result.data;
 
-            // render the output
-            addMessage({
+            // save AI response
+            const aiMessage: ChatMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
                 content: data.content,
                 type: 'text'
-            });
+            };
+
+            // add AI response message to store
+            addMessage(aiMessage);
+
+            // save AI response message to the database
+            await addMessageToConversation(activeConversationId, aiMessage);
 
         } catch (error) {
             console.error("Execution failed:", error);
             addMessage({
                 id: crypto.randomUUID(),
-                role: 'assistant',
-                content: "Sorry, I encountered an error while trying to execute the plan."
+                role: 'transient',
+                content: "Sorry, I encountered an error while trying to execute the plan.",
+                type: 'text'
             });
         } finally {
             setIsLoading(false);
