@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import type { Message as APIMessage } from '../types';
 
 // create a specific type for the frontend that includes ID (we cannot add ID to types.ts without invalidating the API contract as the backend does not expect an ID)
-export interface ChatMessage extends APIMessage {
+// also override the role to allow for the frontend-only 'transient' messages 
+export interface ChatMessage extends Omit<APIMessage, 'role'> {
     id: string;
+    role: APIMessage['role'] | 'transient';
 }
 
 // define the shape of the sidebar data
