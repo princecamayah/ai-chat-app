@@ -1,6 +1,6 @@
-import { collection, addDoc, serverTimestamp, doc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDocs, writeBatch, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
-import type { ChatMessage } from '@/stores/chatStore';
+import type { ChatMessage, ConversationMeta } from '@/stores/chatStore';
 
 // path 1: brand new chat - creates a new conversation and saves the first message
 export const createNewConversation = async (userId: string, firstMessage: ChatMessage) => {
@@ -102,4 +102,41 @@ export const updateConversationState = async (conversationId: string, phase: str
         activePlan: activePlan,
         updatedAt: serverTimestamp()
     });
+}
+
+export const subscribeToUserConversations = (
+    userId: string,
+    onUpdate: (conversations: ConversationMeta[]) => void // this is our setConversations action from Zustand
+) => {
+    const conversationsRef = collection(db, 'conversations');
+    const q = query(
+        conversationsRef,
+        where('userId', '==', userId),
+        orderBy('updatedAt', 'desc')
+    );
+
+    // onSnapshot() opens a real-time web socket connection to the database
+    // it returns a function that severs the connection, so we store it as unsubscribe
+    const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => { 
+            const fetchedConversations: ConversationMeta[] = snapshot.docs.map((doc) => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    title: data.title || "New Conversation",
+                    updatedAt: data.updatedAt ? data.updatedAt.toMillis() : Date.now() // fallback
+                };
+            });
+
+            // save the fetched conversations array to our Zustand store
+            onUpdate(fetchedConversations);
+        },
+        (error) => {
+            console.error("Firestore Listener Error:", error);
+        }
+    );
+
+    // return the teardown function so that React can clean it up
+    return unsubscribe;
 }

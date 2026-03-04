@@ -1,16 +1,20 @@
-import { use, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useChatStore } from './stores/chatStore';
 import { MessageBubble } from './components/chat/MessageBubble';
 import { ChatInput } from './components/chat/ChatInput';
 import { GeneratedPlanCard } from './components/chat/GeneratedPlanCard';
 import { auth } from './lib/firebase'
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { subscribeToUserConversations } from './lib/firebaseHelpers';
 
 export default function App() {
   // connect to the store
   const messages = useChatStore((state) => state.messages);
+  const userId = useChatStore((state) => state.userId);
   const setUserId = useChatStore((state) => state.setUserId);
+  const setConversations = useChatStore((state) => state.setConversations);
 
+  // authentication listener
   useEffect(() => {
     // set up the listener
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -28,8 +32,24 @@ export default function App() {
     });
 
     // clean up: forces the listener to stop if the component ever unmounts (preventing memory leaks)
+    // when useEffect returns a function, React saves it and executes it right before the component unmounts, or before the hook re-runs
     return () => unsubscribe();
-  }, [setUserId]); 
+
+  }, [setUserId]);
+
+  // opens the persistent pipeline to fetch conversations for the authenticated user
+  useEffect(() => {
+    // gatekeeper: only connect once we have a valid user ID
+    if (!userId) return;
+
+    // initiate the persistent pipeline
+    const unsubscribe = subscribeToUserConversations(userId, setConversations);
+
+    // clean up: close connection on unmount
+    // when useEffect returns a function, React saves it and executes it right before the component unmounts, or before the hook re-runs
+    return () => unsubscribe();
+
+  }, [userId, setConversations]); // watches for a change in userId before running 
 
   // auto-scroll logic by attaching a ref to grab the bottom HTML element
   const bottomRef = useRef<HTMLDivElement>(null);
