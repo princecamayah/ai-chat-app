@@ -6,7 +6,7 @@ import { GeneratedPlanCard } from './components/chat/GeneratedPlanCard';
 import { Sidebar } from './components/chat/Sidebar';
 import { auth } from './lib/firebase'
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { subscribeToUserConversations } from './lib/firebaseHelpers';
+import { fetchConversationMessages, subscribeToUserConversations } from './lib/firebaseHelpers';
 
 export default function App() {
   // connect to the store
@@ -14,6 +14,9 @@ export default function App() {
   const userId = useChatStore((state) => state.userId);
   const setUserId = useChatStore((state) => state.setUserId);
   const setConversations = useChatStore((state) => state.setConversations);
+  const activeConversationId = useChatStore((state) => state.activeConversationId);
+  const setMessages = useChatStore((state) => state.setMessages);
+  const resetChat = useChatStore((state) => state.resetChat);
 
   // authentication listener
   useEffect(() => {
@@ -51,6 +54,20 @@ export default function App() {
     return () => unsubscribe();
 
   }, [userId, setConversations]); // watches for a change in userId before running 
+
+  useEffect(() => {
+    if (!activeConversationId) {
+      resetChat();
+      return;
+    }
+
+    const loadMessages = async () => {
+      const pastMessages = await fetchConversationMessages(activeConversationId);
+      setMessages(pastMessages);
+    };
+
+    loadMessages();
+  }, [activeConversationId, setMessages, resetChat]);
 
   // auto-scroll logic by attaching a ref to grab the bottom HTML element
   const bottomRef = useRef<HTMLDivElement>(null);

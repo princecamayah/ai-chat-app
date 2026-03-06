@@ -58,6 +58,7 @@ interface ChatState {
     setConversations: (conversations: ConversationMeta[]) => void;
     setActiveConversation: (id: string | null) => void;
     startNewChat: () => void;
+    setMessages: (messages: ChatMessage[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -107,5 +108,8 @@ export const useChatStore = create<ChatState>((set) => ({
             phase: 'discovery',
             activePlan: null
         })),
+
+    setMessages: (messages) =>
+        set(() => ({ messages })),
 }));
 

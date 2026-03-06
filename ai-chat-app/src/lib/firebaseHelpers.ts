@@ -140,3 +140,31 @@ export const subscribeToUserConversations = (
     // return the teardown function so that React can clean it up
     return unsubscribe;
 }
+
+// fetch all messages for a given conversation ID
+export const fetchConversationMessages = async (conversationId: string): Promise<ChatMessage[]> => {
+    try {
+        const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+
+        const q = query(messagesRef, orderBy('createdAt', 'asc'));
+
+        const snapshot = await getDocs(q);
+
+        const fetchedMessages = snapshot.docs.map((doc) => {
+            const data = doc.data()
+            return {
+                id: doc.id,
+                role: data.role,
+                content: data.content,
+                type: data.type,
+                createdAt: data.createdAt ? data.createdAt.toMillis() : Date.now()
+            } as ChatMessage;
+        });
+
+        return fetchedMessages;
+    } catch (error) {
+        console.error("Error fetching messages:", error);
+        return [];
+    }
+    
+};
