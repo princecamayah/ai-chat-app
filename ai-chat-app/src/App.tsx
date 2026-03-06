@@ -55,19 +55,19 @@ export default function App() {
 
   }, [userId, setConversations]); // watches for a change in userId before running 
 
+  // fetches all messages for a given conversation
   useEffect(() => {
-    if (!activeConversationId) {
-      resetChat();
-      return;
-    }
+    // do nothing if there is no active chat ID
+    if (!activeConversationId) return;
 
+    // otherwise fetch the messages
     const loadMessages = async () => {
       const pastMessages = await fetchConversationMessages(activeConversationId);
       setMessages(pastMessages);
     };
 
     loadMessages();
-  }, [activeConversationId, setMessages, resetChat]);
+  }, [activeConversationId, setMessages]);
 
   // auto-scroll logic by attaching a ref to grab the bottom HTML element
   const bottomRef = useRef<HTMLDivElement>(null);

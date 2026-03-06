@@ -279,7 +279,6 @@ export function ChatInput() {
 
             setPhase('execution');
             
-
             // create an explicit trigger message to execute the plan which will act as the user's first post-execution message
             const executionText = "Hello. I am ready to begin. Please proceed with generating the output exactly as described in your system instructions.";
             const executionMsg: ChatMessage = {

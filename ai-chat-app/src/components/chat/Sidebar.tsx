@@ -4,7 +4,7 @@ export const Sidebar = () => {
     const conversations = useChatStore((state) => state.conversations);
     const activeConversationId = useChatStore((state) => state.activeConversationId);
     const setActiveConversation = useChatStore((state) => state.setActiveConversation);
-    const resetChat = useChatStore((state) => state.resetChat);
+    const startNewChat = useChatStore((state) => state.startNewChat);
 
     return (
         <aside className="w-64 h-screen bg-gray-900 text-gray-100 flex flex-col border-r border-gray-800">
@@ -13,7 +13,7 @@ export const Sidebar = () => {
             <div className="p-4 border-b border-gray-800">
                 <h2 className="text-xl font-bold mb-4">Scaffolding Assistant</h2>
                 <button
-                    onClick={resetChat}
+                    onClick={startNewChat}
                     className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded text-sm font-semibold transition"
                 >
                     + New Chat
