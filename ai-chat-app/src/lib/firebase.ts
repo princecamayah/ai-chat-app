@@ -8,7 +8,7 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCkgHJsbx6tLnN2clNiZ0JVOCdMn1kPjWo",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "cs310-ai-chat-app.firebaseapp.com",
   projectId: "cs310-ai-chat-app",
   storageBucket: "cs310-ai-chat-app.firebasestorage.app",
