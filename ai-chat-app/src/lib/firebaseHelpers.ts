@@ -18,20 +18,6 @@ export const createNewConversation = async (userId: string, firstMessage: ChatMe
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
-
-        // get the location of the subcollection of the new document
-        // db root -> converstions collection -> new document -> subcollection of the new document
-        const messagesRef = collection(db, 'conversations', newConversationDoc.id, 'messages');
-
-        // save the new message into the subcollection
-        if (firstMessage.role !== 'transient') {
-            await addDoc(messagesRef, {
-                role: firstMessage.role,
-                content: firstMessage.content,
-                type: firstMessage.type,
-                createdAt: serverTimestamp()
-            });
-        }
         
         // return the id of the newly created conversation so that the Zustand store can update its active state
         return newConversationDoc.id;
@@ -54,6 +40,7 @@ export const addMessageToConversation = async (conversationId: string, newMessag
         });
 
         // get the location of the messages subcollection in the conversation document
+        // db root -> converstions collection -> new document -> subcollection of the document
         const messagesRef = collection(db, 'conversations', conversationId, 'messages');
 
         // add the new message

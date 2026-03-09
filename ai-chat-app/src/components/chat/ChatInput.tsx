@@ -116,7 +116,19 @@ export function ChatInput() {
             if (userId) {
                 if (!currentConvId) {
                     // path 1: brand new chat
+
+                    // create the new conversation with the title using userMessage
                     currentConvId = await createNewConversation(userId, userMessage);
+
+                    // save the AI welcome message
+                    const welcomeMessage = messages[0];
+                    if (welcomeMessage) {
+                        await addMessageToConversation(currentConvId, welcomeMessage);
+                    }
+
+                    // save the user's message
+                    await addMessageToConversation(currentConvId, userMessage);
+
                     // update active conversation id in the Zustand store
                     setActiveConversation(currentConvId);
                 } else {
