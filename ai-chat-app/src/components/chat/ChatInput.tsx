@@ -371,15 +371,16 @@ export function ChatInput() {
         return (
             <div className="flex w-full gap-4">
                 <button
-                    className="flex-1 bg-blue-100 text-blue-700 py-2 rounded-md hover:bg-blue-200 font-medium"
+                    className="flex-1 bg-secondary text-secondary-foreground py-2 rounded-md hover:brightness-110 cursor-pointer font-medium transition-colors"
                     onClick={handleEdit}
                 >
                     Edit Plan
                 </button>
 
                 <button
-                    className="flex-1 bg-green-500 text-white py-2 rounded-md hover:bg-green-600 font-medium"
+                    className="flex-1 bg-primary text-primary-foreground py-2 rounded-md hover:brightness-110 cursor-pointer font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleApprove}
+                    disabled={isLoading}
                 >
                     Approve & Get Answer
                 </button>
@@ -396,7 +397,7 @@ export function ChatInput() {
                     <button
                         onClick={handleGeneratePlan}
                         disabled={isLoading}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                        className="text-xs font-medium text-primary hover:brightness-110 cursor-pointer underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {isLoading ? 'Generating...' : 'Ready? Generate Plan'}
                     </button>
@@ -405,7 +406,7 @@ export function ChatInput() {
 
             <div className="flex w-full items-end gap-2">
                 <textarea
-                    className="flex-1 resize-none rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 resize-none rounded-md border border-input bg-background text-foreground p-2 focus:outline-none focus:ring-2 focus:ring-ring"
                     rows={1}
                     placeholder={phase === 'refinement' ? "What would you like to change?" : "Type here..."}
                     value={inputText}
@@ -416,7 +417,7 @@ export function ChatInput() {
 
                 <button
                     onClick={handleSend}
-                    className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+                    className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:brightness-110 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isLoading || !inputText.trim()} // make the button gray if the text box is empty
                 >
                     {phase === 'refinement' ? "Update" : "Send"}

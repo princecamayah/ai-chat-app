@@ -16,7 +16,6 @@ export default function App() {
   const setConversations = useChatStore((state) => state.setConversations);
   const activeConversationId = useChatStore((state) => state.activeConversationId);
   const setMessages = useChatStore((state) => state.setMessages);
-  const resetChat = useChatStore((state) => state.resetChat);
 
   // authentication listener
   useEffect(() => {
@@ -79,7 +78,7 @@ export default function App() {
 
   return (
     // main container
-    <div className="flex h-screen w-full bg-gray-900 text-gray-100 overflow-hidden">
+    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
 
       {/* left column sidebar */}
       <Sidebar />
@@ -92,7 +91,7 @@ export default function App() {
 
             {/* empty state */}
             {messages.length === 0 && (
-              <div className="mt-20 text-center text-gray-400">
+              <div className="mt-20 text-center text-muted-foreground">
                 <p>Start by saying "Hello"...</p>
               </div>
             )}
@@ -112,7 +111,7 @@ export default function App() {
         </main>
 
         {/* bottom: input area */}
-        <footer className="p-4 bg-white border-t">
+        <footer className="p-4 bg-background border-t border-border">
          <div className="mx-auto max-w-3xl">
             <ChatInput />
          </div>

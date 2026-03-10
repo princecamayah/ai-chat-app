@@ -8,14 +8,17 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
     const isUser = message.role === 'user';
+    const isTransient = message.role === 'transient';
 
     return (
         <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
             <div
                 className={`max-w-[80%] rounded-lg px-4 py-2 ${
                     isUser
-                        ? 'bg-blue-500 text-white rounded-br-none'
-                        : 'bg-gray-400 text-white rounded-bl-none'
+                        ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
+                        : isTransient
+                            ? 'text-muted-foreground italic text-sm'
+                            : 'text-foreground'
                 }`}
             >
                 <div className="text-sm leading-relaxed wrap-break-word">
@@ -39,7 +42,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                             // style links: blue for AI, underlined for user
                             a: ({node, ...props}) => (
                                 <a
-                                    className={`underline font-medium ${isUser ? 'text-white' : 'text-blue-600 hover:text-blue-800'}`}
+                                    className={`underline font-medium ${isUser ? 'text-primary-foreground' : 'text-primary hover:text-primary/80'}`}
                                     target='_blank'
                                     rel='noopener noreferrer'
                                     {...props}
@@ -53,8 +56,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                                     <code 
                                         className={`px-1 py-0.5 rounded text-xs font-mono ${
                                             isUser 
-                                                ? 'bg-blue-700 text-white' 
-                                                : 'bg-gray-100 text-red-600 border border-gray-200'
+                                                ? 'bg-primary-foreground/20 text-primary-foreground' 
+                                                : 'bg-muted text-muted-foreground border border-border'
                                         }`} 
                                         {...props} 
                                     />
@@ -65,7 +68,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                             blockquote: ({node, ...props}) => (
                                 <blockquote 
                                     className={`border-l-4 pl-3 italic my-2 ${
-                                        isUser ? 'border-white/50' : 'border-gray-300 text-gray-600'
+                                        isUser ? 'border-primary-foreground/50' : 'border-border text-muted-foreground'
                                     }`} 
                                     {...props} 
                                 />

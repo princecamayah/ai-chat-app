@@ -27,7 +27,7 @@ I work a little differently to other AI - I use a structured 3-phase approach: t
 2. Then, I'll generate a **Blueprint**, helping you to see if I've understood your task accurately.
 3. Finally, you'll have the opportunity to refine your blueprint, and once you approve it, we will **Execute** it.
 
-*To get started, tell me: what is your **goal** or **project** you want to work on today?*
+To get started, tell me: what is your **goal** or **project** you want to work on today?
 `
 };
 
