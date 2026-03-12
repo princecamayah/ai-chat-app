@@ -15,6 +15,8 @@ export interface ConversationMeta {
     updatedAt: number; // Unix timestamp
 }
 
+export type LoadingStatus = 'idle' | 'typing' | 'generating';
+
 const WELCOME_MSG: ChatMessage = {
     id: 'intro-1',
     role: 'assistant',
@@ -48,12 +50,14 @@ interface ChatState {
     messages: ChatMessage[];
     phase: 'discovery' | 'review' | 'refinement' | 'execution';
     activePlan: string | null; // stores the most recent plan
+    loadingStatus: LoadingStatus;
 
     // -- actions --
     setUserId: (id: string | null) => void;
     addMessage: (msg: ChatMessage) => void;
     setPhase: (phase: ChatState['phase']) => void;
     setActivePlan: (plan: string) => void;
+    setLoadingStatus: (status: LoadingStatus) => void;
     resetChat: () => void; // clears conversation history
     setConversations: (conversations: ConversationMeta[]) => void;
     setActiveConversation: (id: string | null) => void;
@@ -69,6 +73,7 @@ export const useChatStore = create<ChatState>((set) => ({
     messages: [WELCOME_MSG],
     phase: 'discovery',
     activePlan: null,
+    loadingStatus: 'idle',
 
     // TEST INITIAL VALUES (REFINEMENT)
     // messages: [TEST_PLAN],
@@ -90,6 +95,9 @@ export const useChatStore = create<ChatState>((set) => ({
 
     setActivePlan: (plan) =>
         set(() => ({ activePlan: plan })),
+
+    setLoadingStatus: (status) => 
+        set(() => ({ loadingStatus: status })),
 
     // used when switching from review -> execution
     resetChat: () =>

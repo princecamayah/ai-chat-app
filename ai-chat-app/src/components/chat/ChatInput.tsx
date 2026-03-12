@@ -71,7 +71,6 @@ function prepareApiHistory(currentMessages: any[], newMessageContent: string, ph
 
 export function ChatInput() {
     const [inputText, setInputText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
 
     // store access
     const messages = useChatStore((state) => state.messages);
@@ -79,23 +78,25 @@ export function ChatInput() {
     const activePlan = useChatStore((state) => state.activePlan);
     const userId = useChatStore((state) => state.userId);
     const activeConversationId = useChatStore((state) => state.activeConversationId);
+    const loadingStatus = useChatStore((state) => state.loadingStatus);
 
     const addMessage = useChatStore((state) => state.addMessage);
     const setPhase = useChatStore((state) => state.setPhase);
     const setActivePlan = useChatStore((state) => state.setActivePlan);
     const resetChat = useChatStore((state) => state.resetChat);
     const setActiveConversation = useChatStore((state) => state.setActiveConversation);
+    const setLoadingStatus = useChatStore((state) => state.setLoadingStatus);
 
     // arrow function means create a variable handleSend and set it equal to a function that takes no inputs and that runs the following code
     // this function handles the standard chat message sent from the chat input area
     const handleSend = async () => {
 
         // don't send empty input or input with just spaces
-        if (!inputText.trim() || isLoading) return;
+        if (!inputText.trim() || loadingStatus !== 'idle') return;
 
         const userText = inputText;
         setInputText(''); // clear input
-        setIsLoading(true);
+        setLoadingStatus('typing');
 
         // create the message object
         const userMessage: ChatMessage = {
@@ -193,7 +194,7 @@ export function ChatInput() {
                 content: "Sorry, I'm having trouble responding right now."
             });
         } finally {
-            setIsLoading(false);
+            setLoadingStatus('idle');
         }
     }
 
@@ -204,7 +205,7 @@ export function ChatInput() {
             return;
         }
 
-        setIsLoading(true);
+        setLoadingStatus('generating');
 
         // UI message: this updates the global store but does not affect the local messages variable
         // therefore apiHistory defined below does not include it.
@@ -264,7 +265,7 @@ export function ChatInput() {
                 content: "Failed to generate plan. Please try again."
             });
         } finally {
-            setIsLoading(false);
+            setLoadingStatus('idle');
         }
     };
 
@@ -276,7 +277,7 @@ export function ChatInput() {
             return;
         }
 
-        setIsLoading(true);
+        setLoadingStatus('typing');
 
         try {
             // clear the database subcollection pre-execution history
@@ -350,7 +351,7 @@ export function ChatInput() {
                 type: 'text'
             });
         } finally {
-            setIsLoading(false);
+            setLoadingStatus('idle');
         }
     };
 
@@ -380,7 +381,7 @@ export function ChatInput() {
                 <button
                     className="flex-1 bg-primary text-primary-foreground py-2 rounded-md hover:brightness-110 cursor-pointer font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleApprove}
-                    disabled={isLoading}
+                    disabled={loadingStatus !== 'idle'}
                 >
                     Approve & Get Answer
                 </button>
@@ -396,10 +397,10 @@ export function ChatInput() {
                 <div className="flex justify-center pb-2">
                     <button
                         onClick={handleGeneratePlan}
-                        disabled={isLoading}
+                        disabled={loadingStatus !== 'idle'}
                         className="text-xs font-medium text-primary hover:brightness-110 cursor-pointer underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                        {isLoading ? 'Generating...' : 'Ready? Generate Plan'}
+                        {loadingStatus === 'generating' ? 'Generating...' : 'Ready? Generate Plan'}
                     </button>
                 </div>
             )}
@@ -412,13 +413,13 @@ export function ChatInput() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    disabled={isLoading}
+                    disabled={loadingStatus !== 'idle'}
                 />
 
                 <button
                     onClick={handleSend}
                     className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:brightness-110 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isLoading || !inputText.trim()} // make the button gray if the text box is empty
+                    disabled={loadingStatus !== 'idle' || !inputText.trim()} // make the button gray if the text box is empty
                 >
                     {phase === 'refinement' ? "Update" : "Send"}
                 </button>

@@ -4,6 +4,7 @@ import { MessageBubble } from './components/chat/MessageBubble';
 import { ChatInput } from './components/chat/ChatInput';
 import { GeneratedPlanCard } from './components/chat/GeneratedPlanCard';
 import { Sidebar } from './components/chat/Sidebar';
+import { TypingIndicator } from './components/chat/TypingIndicator';
 import { auth } from './lib/firebase'
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { fetchConversationMessages, subscribeToUserConversations } from './lib/firebaseHelpers';
@@ -16,6 +17,7 @@ export default function App() {
   const setConversations = useChatStore((state) => state.setConversations);
   const activeConversationId = useChatStore((state) => state.activeConversationId);
   const setMessages = useChatStore((state) => state.setMessages);
+  const loadingStatus = useChatStore((state) => state.loadingStatus);
 
   // authentication listener
   useEffect(() => {
@@ -104,6 +106,8 @@ export default function App() {
                 return <MessageBubble key={msg.id} message={msg} />
               }
             })}
+
+            {loadingStatus === 'typing' && <TypingIndicator />}
 
             {/* invisible element to auto-scroll to */}
             <div ref={bottomRef}/>
