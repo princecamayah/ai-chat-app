@@ -80,7 +80,7 @@ export default function App() {
 
   return (
     // main container
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex h-dvh w-full bg-background text-foreground overflow-hidden">
 
       {/* left column sidebar */}
       <Sidebar />

@@ -20,7 +20,7 @@ export class GeminiProvider implements AIProvider {
         console.log("DEBUG: System Message found?", !!systemMessage);
         console.log("DEBUG: System instruction:", `"${systemInstruction}"`);
 
-        const modelName = "gemma-3-12b-it";
+        const modelName = "gemma-4-26b-a4b-it";
         // check if model is gemini (supports system instructions) or gemma (does not support)
         const isGemini = modelName.startsWith("gemini");
 
@@ -48,7 +48,7 @@ export class GeminiProvider implements AIProvider {
 
         try {
             const result = await this.client.models.generateContent({
-                model: "gemma-3-27b-it",
+                model: modelName,
                 contents: formattedContents,
                 config: {
                     ...(isGemini ? {
