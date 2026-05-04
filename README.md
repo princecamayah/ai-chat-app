@@ -7,7 +7,7 @@
 
 A web application featuring a guided, four-phase scaffolded architecture to facilitate effective AI prompting. 
 
-📄 **[Read the Full 47-Page CS310 Technical Report](YOUR_LINK_HERE)**
+📄 **[Read the Technical Report](cs310_final_report.pdf)**
 
 ---
 
@@ -31,7 +31,7 @@ This application introduces a deterministic, state-driven intermediary layer. It
 
 ## ⚙️ The 4-Phase Core Engine
 
-![Four-Phase Scaffolded User Journey](link_to_your_architecture_diagram.png)
+![Four-Phase Scaffolded User Journey](high_level_sequence_diagram.png)
 
 **1. Discovery (Extracting Context)**
 Systematically extracts five key components from the user: the goal, role, context, format, and tone. 
@@ -42,7 +42,7 @@ Dynamically constructs and orchestrates an expert-level meta-prompt. The LLM act
 **3. Refinement (Iterative Loop)**
 Users can edit the generated blueprint before execution. This phase implements semantic routing and a custom regex parsing pipeline to reliably extract structured JSON from raw LLM outputs.
 
-**4. Execution (Finalizing Output)**
+**4. Execution (Finalising Output)**
 The approved blueprint is executed using a hidden trigger message. The user receives the highly curated final output and can continue the conversation normally.
 
 ---
